@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link href="/static/css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <header class="masthead bg-secondary text-white text-center">
+        <div class="container d-flex align-items-center flex-column">
+            <h1 class="masthead-heading text-uppercase mb-0">Register</h1>
+            <form action="/register" method="POST" class="form-group mt-4">
+                <input type="text" name="username" placeholder="Username" class="form-control mb-3" required>
+                <input type="password" name="password" placeholder="Password" class="form-control mb-3" required>
+                <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+        </div>
+    </header>
+</body>
+</html>
