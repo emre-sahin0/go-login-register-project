@@ -12,7 +12,7 @@ import (
 
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		// Kullanıcı oturumunu kontrol et
+		// Oturumdan kullanıcı bilgilerini al
 		session, _ := store.Get(r, "session")
 		username, ok := session.Values["username"].(string)
 		if !ok {
@@ -23,7 +23,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		// Yüklenen dosyayı al
 		file, header, err := r.FormFile("photo")
 		if err != nil {
-			http.Error(w, "Dosya yüklenirken bir hata oluştu!", http.StatusBadRequest)
+			http.Error(w, "File upload error!", http.StatusBadRequest)
 			return
 		}
 		defer file.Close()
@@ -32,27 +32,27 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		savePath := fmt.Sprintf("static/uploads/%s", header.Filename)
 		out, err := os.Create(savePath)
 		if err != nil {
-			http.Error(w, "Dosya kaydedilemedi!", http.StatusInternalServerError)
+			http.Error(w, "File save error!", http.StatusInternalServerError)
 			return
 		}
 		defer out.Close()
 		_, err = io.Copy(out, file)
 		if err != nil {
-			http.Error(w, "Dosya yazılırken bir hata oluştu!", http.StatusInternalServerError)
+			http.Error(w, "File write error!", http.StatusInternalServerError)
 			return
 		}
 
-		// MongoDB'ye kaydet
+		// Veritabanına fotoğrafı ekle
 		_, err = UserCollection.UpdateOne(context.TODO(),
 			bson.M{"username": username},
 			bson.M{"$push": bson.M{"photos": header.Filename}},
 		)
 		if err != nil {
-			http.Error(w, "Fotoğraf veritabanına kaydedilemedi!", http.StatusInternalServerError)
+			http.Error(w, "Database update error!", http.StatusInternalServerError)
 			return
 		}
 
-		// Başarılı yönlendirme
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		// Başarıyla yönlendir
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	}
 }

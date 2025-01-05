@@ -18,7 +18,7 @@ func main() {
 	http.HandleFunc("/", handlers.IndexHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
 	http.HandleFunc("/register", handlers.RegisterHandler)
-	//http.HandleFunc("/dashboard", handlers.DashboardHandler)
+	http.HandleFunc("/dashboard", handlers.DashboardHandler)
 	http.HandleFunc("/upload", handlers.UploadHandler)
 	http.HandleFunc("/logout", handlers.LogoutHandler)
 

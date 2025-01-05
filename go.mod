@@ -3,7 +3,6 @@ module go-login-register
 go 1.23.4
 
 require (
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/gorilla/sessions v1.4.0
 	go.mongodb.org/mongo-driver v1.17.1
