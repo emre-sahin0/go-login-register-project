@@ -30,7 +30,6 @@ func GenerateJWT(username string) (string, error) {
 	return token.SignedString(jwtKey)
 }
 
-// RegisterHandler: Kullanıcı kayıt işlemi
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		tmpl := template.Must(template.ParseFiles("templates/register.html"))
@@ -53,7 +52,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		// MongoDB'ye kullanıcı ekleme
 		_, err = UserCollection.InsertOne(context.TODO(), bson.M{
 			"username": username,
-			"password": string(hashedPassword), // Şifre hashlenmiş olarak saklanıyor
+			"password": string(hashedPassword),
 		})
 		if err != nil {
 			http.Error(w, "Kayıt sırasında bir hata oluştu!", http.StatusInternalServerError)
@@ -64,7 +63,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// LoginHandler: Kullanıcı giriş işlemi
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		tmpl := template.Must(template.ParseFiles("templates/login.html"))
@@ -98,18 +96,15 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		session.Values["username"] = username
 		session.Save(r, w)
 
-		// Giriş sonrası ana sayfaya yönlendirme
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	}
 }
 
-// LogoutHandler: Kullanıcı çıkış işlemi
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Oturum (session) sonlandırma
 	session, _ := store.Get(r, "session")
 	session.Options.MaxAge = -1 // Oturumu geçersiz yap
 	session.Save(r, w)
 
-	// Ana sayfaya yönlendirme
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

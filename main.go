@@ -8,19 +8,17 @@ import (
 )
 
 func main() {
-	// MongoDB bağlantısını başlat
+	// MongoDB bağlantısı
 	database.Connect()
 
-	// Kullanıcı işlemleri için MongoDB koleksiyonu
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	handlers.UserCollection = database.Client.Database("go_login_register").Collection("users")
 
-	// HTTP Yönlendirmeleri
 	http.HandleFunc("/", handlers.IndexHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
 	http.HandleFunc("/register", handlers.RegisterHandler)
-	http.HandleFunc("/dashboard", handlers.DashboardHandler)
+	//http.HandleFunc("/dashboard", handlers.DashboardHandler)
 	http.HandleFunc("/upload", handlers.UploadHandler)
 	http.HandleFunc("/logout", handlers.LogoutHandler)
 
