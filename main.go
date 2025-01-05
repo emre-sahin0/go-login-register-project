@@ -21,6 +21,8 @@ func main() {
 	http.HandleFunc("/login", handlers.LoginHandler)
 	http.HandleFunc("/register", handlers.RegisterHandler)
 	http.HandleFunc("/dashboard", handlers.DashboardHandler)
+	http.HandleFunc("/upload", handlers.UploadHandler)
+	http.HandleFunc("/logout", handlers.LogoutHandler)
 
 	fmt.Println("Server is running on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)

@@ -5,6 +5,9 @@ import (
 	"html/template"
 	"net/http"
 
+	"time"
+
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/sessions"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,6 +16,19 @@ import (
 
 var UserCollection *mongo.Collection
 var store = sessions.NewCookieStore([]byte("super-secret-key")) // Güvenli bir key kullanın
+var jwtKey = []byte("super-secret-key")                         // Güvenli bir anahtar kullanın
+
+func GenerateJWT(username string) (string, error) {
+	// Token yükünü oluştur
+	claims := &jwt.MapClaims{
+		"username": username,
+		"exp":      time.Now().Add(24 * time.Hour).Unix(), // 24 saat geçerli
+	}
+
+	// Token'ı oluştur
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtKey)
+}
 
 // RegisterHandler: Kullanıcı kayıt işlemi
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +77,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 
-		// MongoDB'den kullanıcıyı kontrol et
+		// Kullanıcı bilgilerini kontrol et
 		var result bson.M
 		err := UserCollection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&result)
 		if err != nil {
@@ -69,31 +85,31 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Veritabanından gelen hash'lenmiş şifreyi al
+		// Şifre doğrulama
 		storedPassword := result["password"].(string)
-
-		// Şifreyi doğrula
 		err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password))
 		if err != nil {
 			http.Error(w, "Geçersiz kullanıcı adı veya şifre!", http.StatusUnauthorized)
 			return
 		}
 
-		// Session başlat
+		// JWT oluştur veya session başlat
 		session, _ := store.Get(r, "session")
 		session.Values["username"] = username
 		session.Save(r, w)
 
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		// Giriş sonrası ana sayfaya yönlendirme
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
 
 // LogoutHandler: Kullanıcı çıkış işlemi
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	// Oturumu sonlandır
+	// Oturum (session) sonlandırma
 	session, _ := store.Get(r, "session")
-	session.Options.MaxAge = -1 // Session'ı geçersiz yap
+	session.Options.MaxAge = -1 // Oturumu geçersiz yap
 	session.Save(r, w)
 
+	// Ana sayfaya yönlendirme
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
