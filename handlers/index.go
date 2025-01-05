@@ -9,7 +9,7 @@ import (
 )
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	// Kullanıcı oturum bilgilerini kontrol et
+
 	session, _ := store.Get(r, "session")
 	username, ok := session.Values["username"].(string)
 
@@ -19,7 +19,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ok {
-		// Kullanıcı fotoğraflarını veritabanından getir
+
 		err := UserCollection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&user)
 		if err != nil {
 			http.Error(w, "Kullanıcı bilgileri alınamadı!", http.StatusInternalServerError)
@@ -27,7 +27,6 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Şablona veri gönder
 	data := struct {
 		IsLoggedIn bool
 		Username   string

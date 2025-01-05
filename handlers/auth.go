@@ -4,6 +4,7 @@ import (
 	"context"
 	"html/template"
 	"net/http"
+	"regexp"
 
 	"time"
 
@@ -15,17 +16,16 @@ import (
 )
 
 var UserCollection *mongo.Collection
-var store = sessions.NewCookieStore([]byte("super-secret-key")) // Güvenli bir key kullanın
-var jwtKey = []byte("super-secret-key")                         // Güvenli bir anahtar kullanın
+var store = sessions.NewCookieStore([]byte("super-secret-key"))
+var jwtKey = []byte("super-secret-key")
 
 func GenerateJWT(username string) (string, error) {
 	// Token yükünü oluştur
 	claims := &jwt.MapClaims{
 		"username": username,
-		"exp":      time.Now().Add(24 * time.Hour).Unix(), // 24 saat geçerli
+		"exp":      time.Now().Add(24 * time.Hour).Unix(),
 	}
 
-	// Token'ı oluştur
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtKey)
 }
@@ -39,28 +39,38 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		username := r.FormValue("username")
+		email := r.FormValue("email")
 		password := r.FormValue("password")
 
-		// Şifreyi hash'leme
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if err != nil {
-			http.Error(w, "Şifre hashleme sırasında bir hata oluştu!", http.StatusInternalServerError)
+		// E-posta doğrulama
+		if !isValidEmail(email) {
+			http.Error(w, "Invalid email format!", http.StatusBadRequest)
 			return
 		}
 
-		// MongoDB'ye kullanıcı ekleme
-		_, err = UserCollection.InsertOne(context.TODO(), bson.M{
-			"username": username,
+		// Şifre hashleme
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+		// Kullanıcıyı veritabanına kaydet
+		_, err := UserCollection.InsertOne(context.TODO(), bson.M{
+			"email":    email,
 			"password": string(hashedPassword),
+			"photos":   []string{},
 		})
+
 		if err != nil {
-			http.Error(w, "Kayıt sırasında bir hata oluştu!", http.StatusInternalServerError)
+			http.Error(w, "Could not register user!", http.StatusInternalServerError)
 			return
 		}
 
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	}
+}
+
+func isValidEmail(email string) bool {
+
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return re.MatchString(email)
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,14 +82,14 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		username := r.FormValue("username")
+		email := r.FormValue("email")
 		password := r.FormValue("password")
 
-		// Kullanıcı bilgilerini kontrol et
+		// bilgilerini kontrol et
 		var result bson.M
-		err := UserCollection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&result)
+		err := UserCollection.FindOne(context.TODO(), bson.M{"email": email}).Decode(&result)
 		if err != nil {
-			http.Error(w, "Geçersiz kullanıcı adı veya şifre!", http.StatusUnauthorized)
+			http.Error(w, "Invalid email or password!", http.StatusUnauthorized)
 			return
 		}
 
@@ -87,15 +97,16 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		storedPassword := result["password"].(string)
 		err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password))
 		if err != nil {
-			http.Error(w, "Geçersiz kullanıcı adı veya şifre!", http.StatusUnauthorized)
+			http.Error(w, "Invalid email or password!", http.StatusUnauthorized)
 			return
 		}
 
-		// JWT oluştur veya session başlat
+		// Session başlat
 		session, _ := store.Get(r, "session")
-		session.Values["username"] = username
+		session.Values["email"] = email
 		session.Save(r, w)
 
+		// Dashboard'a yönlendirme
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	}
 }
@@ -103,7 +114,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Oturum (session) sonlandırma
 	session, _ := store.Get(r, "session")
-	session.Options.MaxAge = -1 // Oturumu geçersiz yap
+	session.Options.MaxAge = -1
 	session.Save(r, w)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)

@@ -1,39 +1,48 @@
 package handlers
 
 import (
+	"context"
 	"html/template"
 	"net/http"
-
-	"context"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 func DashboardHandler(w http.ResponseWriter, r *http.Request) {
+	// e-posta bilgi
 	session, _ := store.Get(r, "session")
-	username, ok := session.Values["username"].(string)
+	email, ok := session.Values["email"].(string)
 
-	if !ok || username == "" {
+	if !ok || email == "" {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
+	//  Mongoden al
 	var user struct {
-		Username string
-		Photos   []string
+		Email  string
+		Photos []string
 	}
-
-	err := UserCollection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&user)
+	err := UserCollection.FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
 	if err != nil {
 		http.Error(w, "Kullanıcı bilgileri alınamadı!", http.StatusInternalServerError)
 		return
 	}
 
+	//  "@" işaretine kadar olan
+	idx := strings.Index(email, "@")
+	username := email
+	if idx > 0 {
+		username = email[:idx]
+	}
+
+	// Dashboard'a gönderilecek veri
 	data := struct {
 		Username string
 		Photos   []string
 	}{
-		Username: user.Username,
+		Username: username,
 		Photos:   user.Photos,
 	}
 
